@@ -49,8 +49,10 @@ public class TestGenerator {
 	
 	public static double defaultScheduleTolerance = 0.1;
 	public static double defaultHeadwayTolerance = 1.0;
+	public static double defaultWaitTime = 0.1;
 	public static double scheduleCost = 10;
 	public static double headwayCost = 100;
+	public static double waitCost = 0.1;
 	
 	public static String route_id = "Red";
 	public static String direction = "0";
@@ -65,16 +67,22 @@ public class TestGenerator {
 	 * @throws ParseException 
 	 */
 	public static void main(String[] args) throws IOException, ParseException {
-		// Generate a CCTP problem from the schedule of MBTA route 1
+		// Generate a CCTP problem from the schedule of MBTA Red Line
 		
-		int max_trips = 10; 
+		int max_trips = 20; 
+		int max_stops = 20; 
+		
+		boolean include_schedule_constraints = false;
+		boolean include_headway_constraints = true;
 		
 		String routeDataPrefix = "data/MBTA_GTFS/";
 		String performanceDataPrefix = "data/Redline_performance/";
 		
 		System.out.println("Route: "+route_id+"\tDirection: "+direction+"\tDate: "+date+"\tDayofWeek: "+day_of_week);
 		System.out.println("MaxTrips: "+max_trips+"\tStops: "+Arrays.toString(stop_ids));
-		System.out.println("ScheduleTolerance "+defaultScheduleTolerance + "\tScheduleCost "+scheduleCost + "\tHeadwayTolerance "+defaultHeadwayTolerance + "\tHeadwayCost "+headwayCost);
+		System.out.println("ScheduleTolerance "+defaultScheduleTolerance + "\tScheduleCost "+scheduleCost 
+				+ "\tHeadwayTolerance "+defaultHeadwayTolerance + "\tHeadwayCost "+headwayCost
+				+ "\tWaitTolerance "+defaultWaitTime + "\tWaitCost "+waitCost);
 		System.out.println("Name\tStops #\tTrips #\tEpisode #");		
 		
 		// We first parse the trips
@@ -99,21 +107,67 @@ public class TestGenerator {
 		
 //		System.out.println("Route "+route_id+" trips (D1): " + route_trips.size() + "/" + ptTrips.size());
 		
-		for (int trips = 1; trips <= max_trips; trips++){
-				
-				CCTP newCCTP = generateCCTP(trips,routeDataPrefix);	
-				
-				String outFilename = "tests/MBTA/Route_"+route_id+"_"+trips;
-				
+		ArrayList<PTTrip> route = new ArrayList<PTTrip>();
+		
+		// Add route trips to the list and sort based on their departure time
+		for (String trip_id : route_trips){
+			
+			PTTrip trip = ptTrips.get(trip_id);
+			
+			if (route.size() == 0){
+				route.add(trip);
+			} else {
+				for (int idx = 0; idx < route.size(); idx++){		
+					if (trip.arrival_times.get(1) < route.get(idx).arrival_times.get(1)){
+						route.add(idx, trip);
+						break;
+					}					
+				}
+			}			
+		}
+
+		for (int trips = 1; trips <= route.size(); trips++){
+			
+			if (trips > max_trips){
+				break;
+			}
+			
+			if (max_stops < 0){
+				CCTP newCCTP = generateCCTP(trips,stop_ids.length,include_schedule_constraints,include_headway_constraints,routeDataPrefix);	
+
+				String outFoldername = "tests/MBTA/Headway/";
+				String outFilename = "Route_"+route_id+"_Headway_"+trips;
+
 //				System.out.println("Saved to " + outFilename);
-				IO_CCTP.saveCCTP(newCCTP, outFilename+".cctp");
-				IO_CCTP.saveCCTPasTPN(newCCTP, outFilename+".tpn");
-        		System.out.println("Route_"+route_id+"_"+trips+"\t"+stop_ids.length+"\t"+trips+"\t"+newCCTP.episodes.size());
+				IO_CCTP.saveCCTP(newCCTP, outFoldername+outFilename+".cctp");
+				IO_CCTP.saveCCTPasTPN(newCCTP, outFoldername+outFilename+".tpn");
+	    		System.out.println(outFilename+"\t"+stop_ids.length+"\t"+trips+"\t"+newCCTP.episodes.size());
+				
+			} else {
+				for (int stops = 1; stops <= stop_ids.length; stops++){
+					
+					if (stops > max_stops){
+						break;
+					}
+					
+					CCTP newCCTP = generateCCTP(trips,stops,include_schedule_constraints,include_headway_constraints,routeDataPrefix);	
+					
+					String outFoldername = "tests/MBTA/Headway/";
+					String outFilename = "Route_"+route_id+"_Headway_"+trips + "_Stop_"+stops;
+					
+		//				System.out.println("Saved to " + outFilename);
+					IO_CCTP.saveCCTP(newCCTP, outFoldername+outFilename+".cctp");
+					IO_CCTP.saveCCTPasTPN(newCCTP, outFoldername+outFilename+".tpn");
+		    		System.out.println(outFilename+"\t"+stop_ids.length+"\t"+trips+"\t"+newCCTP.episodes.size());
+	    		}
+			}
+			
 		}
 	}
 
 	
-	public static CCTP generateCCTP(int max_trips, String routeDataPrefix) throws IOException, ParseException{
+	public static CCTP generateCCTP(int max_trips, int max_stops, boolean include_schedule_constraints, 
+			boolean include_headway_constraints, String routeDataPrefix) throws IOException, ParseException{
 		
 		ArrayList<PTTrip> route = new ArrayList<PTTrip>();
 		
@@ -170,12 +224,16 @@ public class TestGenerator {
 			Collections.sort(trip.stop_sequences);
 			
 			Event departure_origin = new Event("Wait for Departure Origin");
-			Episode wait_origin = createEpisode(new Episode("Wait for Departure Origin",0,0.01
-					,false,true,start,departure_origin,"Controllable;Activity"),newCCTP);
+//			Episode wait_origin = createEpisode(new Episode("Wait for Departure Origin",0,0.01
+//					,false,true,start,departure_origin,"Controllable;Activity"),newCCTP);
 
 			Event current_event = departure_origin;
 			
 			for (int stopIdx = 0; stopIdx < trip.stop_sequences.size(); stopIdx++){
+				
+				if (stopIdx > max_stops){
+					break;
+				}
 				
 //				System.out.println("Stop seq: " + stop_seq);
 				int stop_seq = trip.stop_sequences.get(stopIdx);
@@ -193,15 +251,16 @@ public class TestGenerator {
 				// Arrival schedule constraint for this stop
 				long scheduled_arrival = arrival_time - reference_day_time;
 				
-				Episode arrival_constraint = createEpisode(new Episode("Trip " + trip_id + " Arrive at stop " + stop_id + " on " + convertToSimpleTime(scheduled_arrival),
-						scheduled_arrival/60000.0-defaultScheduleTolerance,scheduled_arrival/60000.0+defaultScheduleTolerance
-						,true,true,start,current_event,"Controllable;Constraint"),newCCTP);
-				
-				arrival_constraint.setLBRelaxRatio(scheduleCost);
-				arrival_constraint.setUBRelaxRatio(scheduleCost);
+				if (stopIdx == 0 || include_schedule_constraints){
+					Episode arrival_constraint = createEpisode(new Episode("Trip " + trip_id + " Arrive at stop " + stop_id + " on " + convertToSimpleTime(scheduled_arrival),
+							scheduled_arrival/60000.0-defaultScheduleTolerance,scheduled_arrival/60000.0+defaultScheduleTolerance
+							,true,true,start,current_event,"Controllable;Constraint"),newCCTP);
+					arrival_constraint.setLBRelaxRatio(scheduleCost);
+					arrival_constraint.setUBRelaxRatio(scheduleCost);
+				}
 
 				// Add an additional constraint to maintain headway between trips
-				if (stopEventMap.containsKey(stop_seq)){
+				if (stopEventMap.containsKey(stop_seq) && include_headway_constraints){
 					
 					Event prev_arrival = stopEventMap.get(stop_seq);
 					
@@ -209,8 +268,8 @@ public class TestGenerator {
 							headway-defaultHeadwayTolerance,headway+defaultHeadwayTolerance
 							,true,true,prev_arrival,current_event,"Controllable;Constraint"),newCCTP);
 					
-//					headway_constraint.setLBRelaxRatio(headwayCost);
-//					headway_constraint.setUBRelaxRatio(headwayCost);
+					headway_constraint.setLBRelaxRatio(headwayCost);
+					headway_constraint.setUBRelaxRatio(headwayCost);
 					
 				}
 				
@@ -236,9 +295,9 @@ public class TestGenerator {
 						
 						// Second, wait for departure
 						Event departure = new Event("Leave stop " + stop_id);
-						Episode wait = createEpisode(new Episode(trip_id + " Wait for departure at " + stop_id,0,0.01
+						Episode wait = createEpisode(new Episode(trip_id + " Wait for departure at " + stop_id,0,defaultWaitTime
 								,false,true,dwellComplete,departure,"Controllable;Constraint"),newCCTP);
-						wait.setUBRelaxRatio(0.1);
+						wait.setUBRelaxRatio(waitCost);
 						
 						// Third, traversal to the next stop
 						Event arrival = new Event("Arrive at Stop " + stop_id+ " ("+stopNameMap.get(next_stop_id)+")");

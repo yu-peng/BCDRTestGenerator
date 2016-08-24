@@ -211,8 +211,11 @@ public class TestGeneratorMaxFlexibility {
 	    				newCCTP.findEndEvent();
 	    				newCCTP.startEvent.setExecuted(1394175600000.0);
 	    				
-	    				String outputFileName = outputFolder + "/" + subfolder.getName() + "/" + inputfile.getName().replace("_data", "_cctp").replace(".pos", ".cctp");
-	    				IO_CCTP.saveCCTP(newCCTP, outputFileName);
+	    				String outputCCTPName = outputFolder + "/" + subfolder.getName() + "/" + inputfile.getName().replace("_data", "_cctp").replace(".pos", ".cctp");
+	    				String outputTPNName = outputFolder + "/" + subfolder.getName() + "/" + inputfile.getName().replace("_data", "_cctp").replace(".pos", ".tpn");
+
+	    				IO_CCTP.saveCCTP(newCCTP, outputCCTPName);
+	    				IO_CCTP.saveCCTPasTPN(newCCTP, outputTPNName);
 	    				System.out.println(inputfile.getName().replace("_data", "").replace(".pos", "") + "\t" + newCCTP.episodes.size());
 	    				
 	    				
