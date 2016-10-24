@@ -1,7 +1,5 @@
 package rcpsp;
 
-import io.IO_CCTP;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -12,7 +10,7 @@ import java.util.HashMap;
 import cctp.CCTP;
 import cctp.Episode;
 import cctp.Event;
-
+import io.IO_CCTP;
 import utils.NumUtils;
 
 public class TestGeneratorMaxFlexibility {

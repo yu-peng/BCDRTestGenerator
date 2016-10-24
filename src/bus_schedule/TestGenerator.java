@@ -5,8 +5,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -15,14 +13,12 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.TimeZone;
 
-import io.IO_CCTP;
 import cctp.CCTP;
-import cctp.Candidate;
 import cctp.Episode;
 import cctp.Event;
+import io.IO_CCTP;
 
 public class TestGenerator {
 	

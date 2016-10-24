@@ -1,12 +1,11 @@
 package mission_plan;
 
-import io.IO_CCTP;
-
 import cctp.Assignment;
 import cctp.CCTP;
 import cctp.DecisionVariable;
 import cctp.Episode;
 import cctp.Event;
+import io.IO_CCTP;
 
 
 public class TestGeneratorCCTP {
