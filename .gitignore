@@ -18,3 +18,4 @@ bin/
 
 # data
 data/MBTA_GTFS
+/target/

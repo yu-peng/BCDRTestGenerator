@@ -18,6 +18,7 @@ import java.util.TimeZone;
 import cctp.CCTP;
 import cctp.Episode;
 import cctp.Event;
+import cctp.Episode.EpisodeType;
 import io.IO_CCTP;
 
 public class TestGenerator {
@@ -137,7 +138,7 @@ public class TestGenerator {
 //				System.out.println("Saved to " + outFilename);
 				IO_CCTP.saveCCTP(newCCTP, outFoldername+outFilename+".cctp");
 				IO_CCTP.saveCCTPasTPN(newCCTP, outFoldername+outFilename+".tpn");
-	    		System.out.println(outFilename+"\t"+stop_ids.length+"\t"+trips+"\t"+newCCTP.episodes.size());
+	    		System.out.println(outFilename+"\t"+stop_ids.length+"\t"+trips+"\t"+newCCTP.getEpisodes().size());
 				
 			} else {
 				for (int stops = 1; stops <= stop_ids.length; stops++){
@@ -154,7 +155,7 @@ public class TestGenerator {
 		//				System.out.println("Saved to " + outFilename);
 					IO_CCTP.saveCCTP(newCCTP, outFoldername+outFilename+".cctp");
 					IO_CCTP.saveCCTPasTPN(newCCTP, outFoldername+outFilename+".tpn");
-		    		System.out.println(outFilename+"\t"+stop_ids.length+"\t"+trips+"\t"+newCCTP.episodes.size());
+		    		System.out.println(outFilename+"\t"+stop_ids.length+"\t"+trips+"\t"+newCCTP.getEpisodes().size());
 	    		}
 			}
 			
@@ -249,10 +250,10 @@ public class TestGenerator {
 				
 				if (stopIdx == 0 || include_schedule_constraints){
 					Episode arrival_constraint = createEpisode(new Episode("Trip " + trip_id + " Arrive at stop " + stop_id + " on " + convertToSimpleTime(scheduled_arrival),
-							scheduled_arrival/60000.0-defaultScheduleTolerance,scheduled_arrival/60000.0+defaultScheduleTolerance
-							,true,true,start,current_event,"Controllable;Constraint"),newCCTP);
-					arrival_constraint.setLBRelaxRatio(scheduleCost);
-					arrival_constraint.setUBRelaxRatio(scheduleCost);
+							scheduled_arrival/60000.0-defaultScheduleTolerance,scheduled_arrival/60000.0+defaultScheduleTolerance,
+							true,true,start,current_event,EpisodeType.CONSTRAINT),newCCTP);					
+					arrival_constraint.setLBRelaxCost(scheduleCost);
+					arrival_constraint.setUBRelaxCost(scheduleCost);
 				}
 
 				// Add an additional constraint to maintain headway between trips
@@ -261,11 +262,11 @@ public class TestGenerator {
 					Event prev_arrival = stopEventMap.get(stop_seq);
 					
 					Episode headway_constraint = createEpisode(new Episode("Headway " + headway,
-							headway-defaultHeadwayTolerance,headway+defaultHeadwayTolerance
-							,true,true,prev_arrival,current_event,"Controllable;Constraint"),newCCTP);
+							headway-defaultHeadwayTolerance,headway+defaultHeadwayTolerance,
+							true,true,prev_arrival,current_event,EpisodeType.CONSTRAINT),newCCTP);
 					
-					headway_constraint.setLBRelaxRatio(headwayCost);
-					headway_constraint.setUBRelaxRatio(headwayCost);
+					headway_constraint.setLBRelaxCost(headwayCost);
+					headway_constraint.setUBRelaxCost(headwayCost);
 					
 				}
 				
@@ -273,8 +274,9 @@ public class TestGenerator {
 				
 				// First, passenger on/off
 				Event dwellComplete = new Event("Dwell Complete at " + stop_id + " ("+stopNameMap.get(stop_id)+")");
-				Episode dwell = createEpisode(new Episode("Dwell at " + stop_id + " ("+stopNameMap.get(stop_id)+")",minDwell,maxDwell
-						,false,false,current_event,dwellComplete,"Uncontrollable;Activity"),newCCTP);
+				Episode dwell = createEpisode(new Episode("Dwell at " + stop_id + " ("+stopNameMap.get(stop_id)+")",minDwell,maxDwell,
+						false,false,current_event,dwellComplete,EpisodeType.ACTIVITY),newCCTP);
+				dwell.setControllable(false);
 				
 				setDwellTime(dwell,stop_id,arrival_time);
 				
@@ -291,14 +293,16 @@ public class TestGenerator {
 						
 						// Second, wait for departure
 						Event departure = new Event("Leave stop " + stop_id);
-						Episode wait = createEpisode(new Episode(trip_id + " Wait for departure at " + stop_id,0,defaultWaitTime
-								,false,true,dwellComplete,departure,"Controllable;Constraint"),newCCTP);
-						wait.setUBRelaxRatio(waitCost);
+						Episode wait = createEpisode(new Episode(trip_id + " Wait for departure at " + stop_id,0,defaultWaitTime,
+								false,true,dwellComplete,departure,EpisodeType.CONSTRAINT),newCCTP);
+						wait.setUBRelaxCost(waitCost);
 						
 						// Third, traversal to the next stop
 						Event arrival = new Event("Arrive at Stop " + stop_id+ " ("+stopNameMap.get(next_stop_id)+")");
-						Episode traversal = createEpisode(new Episode("From " + stop_id + " to " + next_stop_id + " ("+stopNameMap.get(next_stop_id)+")",duration,duration+traversalUncertainty
-								,false,false,departure,arrival,"Uncontrollable;Activity"),newCCTP);
+						Episode traversal = createEpisode(new Episode("From " + stop_id + " to " + next_stop_id + " ("+stopNameMap.get(next_stop_id)+")",
+								duration,duration+traversalUncertainty,
+								false,false,departure,arrival,EpisodeType.ACTIVITY),newCCTP);
+						traversal.setControllable(false);
 						current_event = arrival;
 						setTravelTime(traversal, stop_id, next_stop_id, arrival_time);
 						
@@ -311,8 +315,8 @@ public class TestGenerator {
 				
 			}
 			
-			Episode trip_completion = createEpisode(new Episode("Trip Complete",0,Double.POSITIVE_INFINITY
-					,false,false,current_event,end,"Controllable;Constraint"),newCCTP);
+			Episode trip_completion = createEpisode(new Episode("Trip Complete",0,Double.POSITIVE_INFINITY,
+					false,false,current_event,end,EpisodeType.CONSTRAINT),newCCTP);
 			
 		}
 		
@@ -473,10 +477,10 @@ public class TestGenerator {
 //			dwellEpisode.setLB(mean-2*Math.sqrt(var));
 //			dwellEpisode.setUB(mean+2*Math.sqrt(var));
 			
-			Collections.sort(dwellEpisode.historical_durations);
+			Collections.sort(dwellEpisode.getHistoricalData());
 			
-			dwellEpisode.setLB(dwellEpisode.historical_durations.get(0));	        
-	        dwellEpisode.setUB(dwellEpisode.historical_durations.get((int) Math.floor(0.98*dwellEpisode.historical_durations.size())));
+			dwellEpisode.setLB(dwellEpisode.getHistoricalData().get(0));	        
+	        dwellEpisode.setUB(dwellEpisode.getHistoricalData().get((int) Math.floor(0.98*dwellEpisode.getHistoricalData().size())));
 			
 //	        System.out.println("Mean dwell at " + stopId + ":[" + dwellEpisode.getLB() + " ," + dwellEpisode.getUB() + "] from size: " + ((int) Math.floor(0.98*dwellEpisode.historical_durations.size()))+"/"+dwellEpisode.historical_durations.size());
 		}		
@@ -523,10 +527,10 @@ public class TestGenerator {
 //	        }        	
 //	        var = var / travelEpisode.historical_durations.size();
 			
-			Collections.sort(travelEpisode.historical_durations);
+			Collections.sort(travelEpisode.getHistoricalData());
 			
-	        travelEpisode.setLB(travelEpisode.historical_durations.get(0));	        
-	        travelEpisode.setUB(travelEpisode.historical_durations.get((int) Math.floor(0.98*travelEpisode.historical_durations.size())));
+	        travelEpisode.setLB(travelEpisode.getHistoricalData().get(0));	        
+	        travelEpisode.setUB(travelEpisode.getHistoricalData().get((int) Math.floor(0.98*travelEpisode.getHistoricalData().size())));
 			
 //			System.out.println("Mean travel " + fromStopId + "-" + toStopId + ":[" + travelEpisode.getLB() + " ," + travelEpisode.getUB() + "] from size: " + ((int) Math.floor(0.98*travelEpisode.historical_durations.size()))+"/"+travelEpisode.historical_durations.size());
 		}		

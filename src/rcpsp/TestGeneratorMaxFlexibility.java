@@ -9,9 +9,10 @@ import java.util.HashMap;
 
 import cctp.CCTP;
 import cctp.Episode;
+import cctp.Episode.DistributionType;
+import cctp.Episode.EpisodeType;
 import cctp.Event;
 import io.IO_CCTP;
-import utils.NumUtils;
 
 public class TestGeneratorMaxFlexibility {
 	
@@ -83,18 +84,21 @@ public class TestGeneratorMaxFlexibility {
 	    								eventMap.put(elements[0]+"-end", end);
 	    							}
 	    							
-	    							String key = start.name+" -> "+end.name;
-	    							double min_duration = NumUtils.getDoublefromString(elements[1]);
+	    							String key = start.getName()+" -> "+end.getName();
+	    							double min_duration = Double.parseDouble(elements[1]);
 
 	    							if (!activityKeyMap.containsKey(key) && min_duration > 0.00001){
-	    								Episode newActivity = createEpisode(new Episode(key,min_duration,10000,false,true,start,end,0,0.00001,"Uncontrollable;Activity"),newCCTP);
+	    								Episode newActivity = createEpisode(new Episode(key,min_duration,10000,false,true,start,end,0,0.00001,
+	    										EpisodeType.ACTIVITY),newCCTP);
+	    								
+	    								newActivity.setControllable(false);
 
-	    								double mean_duration = NumUtils.getDoublefromString(elements[1]);
+	    								double mean_duration = Double.parseDouble(elements[1]);
 		    							double var_duration = 0.01*mean_duration*mean_duration;
 	    								
-	    								newActivity.mean = mean_duration;
-	    								newActivity.variance = var_duration;
-	    								newActivity.distribution = "Normal";
+	    								newActivity.setDistributionParam("MEAN", mean_duration);
+	    								newActivity.setDistributionParam("VARIANCE",var_duration);
+	    								newActivity.setDistributionType(DistributionType.NORMAL);
 	    								
 	    								activityKeyMap.put(key,newActivity);
 	    								uncontrollableEpisodes.add(newActivity);
@@ -107,7 +111,7 @@ public class TestGeneratorMaxFlexibility {
 	    								
 	    								int idx = i+4;
 	    								
-	    								double bound = NumUtils.getDoublefromString(elements[idx+(elements.length-4)/2]);
+	    								double bound = Double.parseDouble(elements[idx+(elements.length-4)/2]);
 		    							boolean isLowerbound = false;
 	    								
 		    							if (bound >= 0){
@@ -131,11 +135,12 @@ public class TestGeneratorMaxFlexibility {
 			    								eventMap.put(elements[idx]+"-start", constraintEnd);
 			    							}
 			    							
-			    							String constraintKey = constraintStart.name+" -> "+constraintEnd.name;
+			    							String constraintKey = constraintStart.getName()+" -> "+constraintEnd.getName();
 			    							Episode newConstraint = activityKeyMap.get(constraintKey);	
 							
 			    							if (newConstraint == null){
-			    								newConstraint = createEpisode(new Episode(constraintKey,bound,Double.POSITIVE_INFINITY,false,false,constraintStart,constraintEnd,"Controllable;Constraint"),newCCTP);	    								
+			    								newConstraint = createEpisode(new Episode(constraintKey,bound,Double.POSITIVE_INFINITY,
+			    										false,false,constraintStart,constraintEnd,EpisodeType.CONSTRAINT),newCCTP);	    								
 			    								activityKeyMap.put(constraintKey, newConstraint);
 			    							} else {
 			    								newConstraint.setLB(bound);
@@ -157,11 +162,12 @@ public class TestGeneratorMaxFlexibility {
 			    								eventMap.put(elements[0]+"-start", constraintEnd);
 			    							}
 			    							
-			    							String constraintKey = constraintStart.name+" -> "+constraintEnd.name;
+			    							String constraintKey = constraintStart.getName()+" -> "+constraintEnd.getName();
 			    							Episode newConstraint = activityKeyMap.get(constraintKey);	
 
 			    							if (newConstraint == null){
-			    								newConstraint = createEpisode(new Episode(constraintKey,Double.NEGATIVE_INFINITY,-1*bound,false,false,constraintStart,constraintEnd,"Controllable;Constraint"),newCCTP);	    								
+			    								newConstraint = createEpisode(new Episode(constraintKey,Double.NEGATIVE_INFINITY,-1*bound,
+			    										false,false,constraintStart,constraintEnd,EpisodeType.CONSTRAINT),newCCTP);	    								
 			    								activityKeyMap.put(constraintKey, newConstraint);
 			    							} else {
 			    								newConstraint.setUB(-1*bound);
@@ -183,23 +189,23 @@ public class TestGeneratorMaxFlexibility {
 	    				}
 	    				
 	    				for (Episode uncontrollableEpisode : uncontrollableEpisodes){
-	    					for (Episode outEpisode : uncontrollableEpisode.endEvent.outgoingEpisodes){
-	    						outEpisode.setLB(outEpisode.lb - uncontrollableEpisode.lb);
-	    						outEpisode.setUB(outEpisode.ub - uncontrollableEpisode.lb);
+	    					for (Episode outEpisode : uncontrollableEpisode.getToEvent().getOutgoingEpisodes()){
+	    						outEpisode.setLB(outEpisode.getLB() - uncontrollableEpisode.getLB());
+	    						outEpisode.setUB(outEpisode.getUB() - uncontrollableEpisode.getLB());
 
 	    						
 //    							System.out.println(outEpisode.name + " : [" + outEpisode.getLB() + "," + outEpisode.getUB()+"]");
 	    					}
 	    				}
 	    				
-	    				for (Episode episode : newCCTP.episodes.values()){
+	    				for (Episode episode : newCCTP.getEpisodes().values()){
 	    					if (episode.isControllable()){
-	    						if (Double.isInfinite(episode.ub)){
-	    							episode.ub = 1000000.0;
+	    						if (Double.isInfinite(episode.getUB())){
+	    							episode.setUB(1000000.0);
 	    						}
 	    						
-	    						if (Double.isInfinite(episode.lb)){
-	    							episode.lb = -1000000.0;
+	    						if (Double.isInfinite(episode.getLB())){
+	    							episode.setLB(-1000000.0);
 	    						}
 //	    						System.out.println(episode.startEvent.name+"->"+episode.endEvent.name+"["+episode.lb+","+episode.ub+"]");
 	    					}
@@ -207,14 +213,14 @@ public class TestGeneratorMaxFlexibility {
 	    				
 	    				newCCTP.findStartEvent();		
 	    				newCCTP.findEndEvent();
-	    				newCCTP.startEvent.setExecuted(1394175600000.0);
+	    				newCCTP.getStartEvent().setExecuted(1394175600000.0);
 	    				
 	    				String outputCCTPName = outputFolder + "/" + subfolder.getName() + "/" + inputfile.getName().replace("_data", "_cctp").replace(".pos", ".cctp");
 	    				String outputTPNName = outputFolder + "/" + subfolder.getName() + "/" + inputfile.getName().replace("_data", "_cctp").replace(".pos", ".tpn");
 
 	    				IO_CCTP.saveCCTP(newCCTP, outputCCTPName);
 	    				IO_CCTP.saveCCTPasTPN(newCCTP, outputTPNName);
-	    				System.out.println(inputfile.getName().replace("_data", "").replace(".pos", "") + "\t" + newCCTP.episodes.size());
+	    				System.out.println(inputfile.getName().replace("_data", "").replace(".pos", "") + "\t" + newCCTP.getEpisodes().size());
 	    				
 	    				
 	    			}

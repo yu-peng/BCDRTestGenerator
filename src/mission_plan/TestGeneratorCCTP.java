@@ -5,6 +5,7 @@ import cctp.CCTP;
 import cctp.DecisionVariable;
 import cctp.Episode;
 import cctp.Event;
+import cctp.Episode.EpisodeType;
 import io.IO_CCTP;
 
 
@@ -103,7 +104,7 @@ public class TestGeneratorCCTP {
 	        		newCTPP.initialize();
 	        		newCTPP.findStartEvent();
 	        		newCTPP.findEndEvent();
-	        		newCTPP.startEvent.setExecuted(startTime);
+	        		newCTPP.getStartEvent().setExecuted(startTime);
 	        		
 	        		IO_CCTP.saveCCTP(newCTPP, OutputFolder+"/"+OutputFileHeader+"-"+testCount+".cctp");
 	        		IO_CCTP.saveCCTPasTPN(newCTPP, OutputFolder+"/"+OutputFileHeader+"-"+testCount+".tpn");
@@ -133,8 +134,8 @@ public class TestGeneratorCCTP {
 		Event startEvent = leaveStart;
 		Location startLocation = startLoc;		
 	    
-		Episode connector1 = new Episode("Start-Connector:"+auvIdx,0,Double.POSITIVE_INFINITY,false,false,start,leaveStart,"Constraint");
-		Episode connector2 = new Episode("End-Connector:"+auvIdx,0,Double.POSITIVE_INFINITY,false,false,arriveEnd,end,"Constraint");
+		Episode connector1 = new Episode("Start-Connector:"+auvIdx,0,Double.POSITIVE_INFINITY,false,false,start,leaveStart,EpisodeType.CONSTRAINT);
+		Episode connector2 = new Episode("End-Connector:"+auvIdx,0,Double.POSITIVE_INFINITY,false,false,arriveEnd,end,EpisodeType.CONSTRAINT);
 		
 		newCTPP.addEpisode(connector1);
 		newCTPP.addEpisode(connector2);
@@ -179,7 +180,9 @@ public class TestGeneratorCCTP {
 		}
 		double[] mission = getMissionDuration(activities);
 
-		Episode reservation = new Episode("Mission"+missionIdx+"-"+"Duration",mission[0],mission[1],false,true,leaveStart,arriveEnd,Double.POSITIVE_INFINITY,getMissionDurationRelaxationCost(),"Constraint");
+		Episode reservation = new Episode("Mission"+missionIdx+"-"+"Duration",mission[0],mission[1],
+				false,true,leaveStart,arriveEnd,
+				Double.POSITIVE_INFINITY,getMissionDurationRelaxationCost(),EpisodeType.CONSTRAINT);
 		newCTPP.addEpisode(reservation);
 		missionIdx++;
 	}
@@ -238,15 +241,22 @@ public class TestGeneratorCCTP {
 		
 		
 		// create constraints for it
-		Episode moveStartPlace = new Episode(optIdx+"-"+"Move:"+start.name+"-"+place.name,go[0],go[1],true,true,leaveStart,arrivePlace,getTraversalRelaxationCost(),getTraversalRelaxationCost(),goPlace,"Uncontrollable;Activity");
-		Episode explorePlace = new Episode(optIdx+"-"+"Explore:"+place.name,explore[0],explore[1],true,true,arrivePlace,leavePlace,getActivityRelaxationCost(),getActivityRelaxationCost(),goPlace,"Controllable;Activity");
-		Episode movePlaceEnd = new Episode(optIdx+"-"+"Move:"+place.name+"-"+end.name,back[0],back[1],true,true,leavePlace,approachEnd,getTraversalRelaxationCost(),getTraversalRelaxationCost(),goPlace,"Uncontrollable;Activity");
-		Episode standbyEnd = new Episode(optIdx+"-"+"Standby:"+end.name,standby[0],standby[1],false,true,approachEnd,arriveEnd,getActivityRelaxationCost(),getActivityRelaxationCost(),goPlace,"Controllable;Activity");
+		Episode moveStartPlace = new Episode(optIdx+"-"+"Move:"+start.name+"-"+place.name,go[0],go[1],true,true,leaveStart,arrivePlace,
+				getTraversalRelaxationCost(),getTraversalRelaxationCost(),goPlace,EpisodeType.ACTIVITY);
+		Episode explorePlace = new Episode(optIdx+"-"+"Explore:"+place.name,explore[0],explore[1],true,true,arrivePlace,leavePlace,
+				getActivityRelaxationCost(),getActivityRelaxationCost(),goPlace,EpisodeType.ACTIVITY);
+		Episode movePlaceEnd = new Episode(optIdx+"-"+"Move:"+place.name+"-"+end.name,back[0],back[1],true,true,leavePlace,approachEnd,
+				getTraversalRelaxationCost(),getTraversalRelaxationCost(),goPlace,EpisodeType.ACTIVITY);
+		Episode standbyEnd = new Episode(optIdx+"-"+"Standby:"+end.name,standby[0],standby[1],false,true,approachEnd,arriveEnd,
+				getActivityRelaxationCost(),getActivityRelaxationCost(),goPlace,EpisodeType.ACTIVITY);
 
-		moveStartPlace.mean = (go[0]+go[1])/2.0;
-		moveStartPlace.variance = (go[1]-go[0])/6;
-		movePlaceEnd.mean = (back[0]+back[1])/2.0;
-		movePlaceEnd.variance = (back[1]-back[0])/6;
+		moveStartPlace.setControllable(false);
+		movePlaceEnd.setControllable(false);
+		
+		moveStartPlace.setDistributionParam("MEAN", (go[0]+go[1])/2.0);
+		moveStartPlace.setDistributionParam("VARIANCE",(go[1]-go[0])/6);
+		movePlaceEnd.setDistributionParam("MEAN", (back[0]+back[1])/2.0);
+		movePlaceEnd.setDistributionParam("VARIANCE",(back[1]-back[0])/6);
 		
 		newCTPP.addEpisode(moveStartPlace);
 		newCTPP.addEpisode(explorePlace);
