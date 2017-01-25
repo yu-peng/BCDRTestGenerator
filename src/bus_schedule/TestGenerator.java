@@ -99,8 +99,8 @@ public class TestGenerator {
 				day_of_week,day);
 		parseStopTime(routeDataPrefix+"stop_times.txt");
 		parseStop(routeDataPrefix+"stops.txt");
-		parseHistoricalTravelTimes(performanceDataPrefix + "travel_times/");
-		parseHistoricalDwellTimes(performanceDataPrefix + "dwell_times/");
+//		parseHistoricalTravelTimes(performanceDataPrefix + "travel_times/");
+//		parseHistoricalDwellTimes(performanceDataPrefix + "dwell_times/");
 		
 //		System.out.println("Route "+route_id+" trips (D1): " + route_trips.size() + "/" + ptTrips.size());
 		
@@ -450,40 +450,40 @@ public class TestGenerator {
 		}		
 		
 //		double mean = 0;
-		for (long segmentIdx : new long[]{prevSegment,segment,nextSegment}){
-			ArrayList<DwellTime> times = dwellTimes.get(segmentIdx + ":" + stopId);
-
-			if (times != null){
-				for (DwellTime dwellTime : times){				
-					if (Math.abs((seconds % 86400) - (dwellTime.arrTime % 86400)) < segmentSize 
-							|| Math.abs((seconds % 86400)+86400 - (dwellTime.arrTime % 86400)) < segmentSize 
-							|| Math.abs((seconds % 86400) - (dwellTime.arrTime % 86400) - 86400) < segmentSize){					
-//						mean += dwellTime.dwellTime;
-						dwellEpisode.addHistoricalData(dwellTime.dwellTime/60.0);
-						historicalDataFound = true;
-					}
-				}
-			}		
-		}
+//		for (long segmentIdx : new long[]{prevSegment,segment,nextSegment}){
+//			ArrayList<DwellTime> times = dwellTimes.get(segmentIdx + ":" + stopId);
+//
+//			if (times != null){
+//				for (DwellTime dwellTime : times){				
+//					if (Math.abs((seconds % 86400) - (dwellTime.arrTime % 86400)) < segmentSize 
+//							|| Math.abs((seconds % 86400)+86400 - (dwellTime.arrTime % 86400)) < segmentSize 
+//							|| Math.abs((seconds % 86400) - (dwellTime.arrTime % 86400) - 86400) < segmentSize){					
+////						mean += dwellTime.dwellTime;
+//						dwellEpisode.addHistoricalData(dwellTime.dwellTime/60.0);
+//						historicalDataFound = true;
+//					}
+//				}
+//			}		
+//		}
 		
-		if (historicalDataFound){
-//			mean = mean / 60.0 / dwellEpisode.historical_durations.size();
+//		if (historicalDataFound){
+////			mean = mean / 60.0 / dwellEpisode.historical_durations.size();
+////			
+////	        double var = 0;
+////	        for(double a :dwellEpisode.historical_durations){
+////	        	var += (mean-a)*(mean-a);
+////	        }        	
+////	        var = var / dwellEpisode.historical_durations.size();
+////			dwellEpisode.setLB(mean-2*Math.sqrt(var));
+////			dwellEpisode.setUB(mean+2*Math.sqrt(var));
 //			
-//	        double var = 0;
-//	        for(double a :dwellEpisode.historical_durations){
-//	        	var += (mean-a)*(mean-a);
-//	        }        	
-//	        var = var / dwellEpisode.historical_durations.size();
-//			dwellEpisode.setLB(mean-2*Math.sqrt(var));
-//			dwellEpisode.setUB(mean+2*Math.sqrt(var));
-			
-			Collections.sort(dwellEpisode.getHistoricalData());
-			
-			dwellEpisode.setLB(dwellEpisode.getHistoricalData().get(0));	        
-	        dwellEpisode.setUB(dwellEpisode.getHistoricalData().get((int) Math.floor(0.98*dwellEpisode.getHistoricalData().size())));
-			
-//	        System.out.println("Mean dwell at " + stopId + ":[" + dwellEpisode.getLB() + " ," + dwellEpisode.getUB() + "] from size: " + ((int) Math.floor(0.98*dwellEpisode.historical_durations.size()))+"/"+dwellEpisode.historical_durations.size());
-		}		
+//			Collections.sort(dwellEpisode.getHistoricalData());
+//			
+//			dwellEpisode.setLB(dwellEpisode.getHistoricalData().get(0));	        
+//	        dwellEpisode.setUB(dwellEpisode.getHistoricalData().get((int) Math.floor(0.98*dwellEpisode.getHistoricalData().size())));
+//			
+////	        System.out.println("Mean dwell at " + stopId + ":[" + dwellEpisode.getLB() + " ," + dwellEpisode.getUB() + "] from size: " + ((int) Math.floor(0.98*dwellEpisode.historical_durations.size()))+"/"+dwellEpisode.historical_durations.size());
+//		}		
 	}
 	
 	public static void setTravelTime(Episode travelEpisode, String fromStopId, String toStopId, long time){
@@ -502,38 +502,38 @@ public class TestGenerator {
 		}		
 		
 //		double mean = 0;
-		for (long segmentIdx : new long[]{prevSegment,segment,nextSegment}){
-			ArrayList<TravelTime> times = travelTimes.get(segmentIdx + ":" + fromStopId + "-" + toStopId);
-
-			if (times != null){
-				for (TravelTime travelTime : times){				
-					if (Math.abs((seconds % 86400) - (travelTime.depTime % 86400)) < segmentSize 
-							|| Math.abs((seconds % 86400)+86400 - (travelTime.depTime % 86400)) < segmentSize 
-							|| Math.abs((seconds % 86400) - (travelTime.depTime % 86400) - 86400) < segmentSize){					
-//						mean += travelTime.travelTime;
-						travelEpisode.addHistoricalData(travelTime.travelTime/60.0);
-						historicalDataFound = true;
-					}
-				}
-			}		
-		}
-		
-		if (historicalDataFound){
-//			mean = mean / 60.0 / travelEpisode.historical_durations.size();
-			
-//	        double var = 0;
-//	        for(double a :travelEpisode.historical_durations){
-//	        	var += (mean-a)*(mean-a);
-//	        }        	
-//	        var = var / travelEpisode.historical_durations.size();
-			
-			Collections.sort(travelEpisode.getHistoricalData());
-			
-	        travelEpisode.setLB(travelEpisode.getHistoricalData().get(0));	        
-	        travelEpisode.setUB(travelEpisode.getHistoricalData().get((int) Math.floor(0.98*travelEpisode.getHistoricalData().size())));
-			
-//			System.out.println("Mean travel " + fromStopId + "-" + toStopId + ":[" + travelEpisode.getLB() + " ," + travelEpisode.getUB() + "] from size: " + ((int) Math.floor(0.98*travelEpisode.historical_durations.size()))+"/"+travelEpisode.historical_durations.size());
-		}		
+//		for (long segmentIdx : new long[]{prevSegment,segment,nextSegment}){
+//			ArrayList<TravelTime> times = travelTimes.get(segmentIdx + ":" + fromStopId + "-" + toStopId);
+//
+//			if (times != null){
+//				for (TravelTime travelTime : times){				
+//					if (Math.abs((seconds % 86400) - (travelTime.depTime % 86400)) < segmentSize 
+//							|| Math.abs((seconds % 86400)+86400 - (travelTime.depTime % 86400)) < segmentSize 
+//							|| Math.abs((seconds % 86400) - (travelTime.depTime % 86400) - 86400) < segmentSize){					
+////						mean += travelTime.travelTime;
+//						travelEpisode.addHistoricalData(travelTime.travelTime/60.0);
+//						historicalDataFound = true;
+//					}
+//				}
+//			}		
+//		}
+//		
+//		if (historicalDataFound){
+////			mean = mean / 60.0 / travelEpisode.historical_durations.size();
+//			
+////	        double var = 0;
+////	        for(double a :travelEpisode.historical_durations){
+////	        	var += (mean-a)*(mean-a);
+////	        }        	
+////	        var = var / travelEpisode.historical_durations.size();
+//			
+//			Collections.sort(travelEpisode.getHistoricalData());
+//			
+//	        travelEpisode.setLB(travelEpisode.getHistoricalData().get(0));	        
+//	        travelEpisode.setUB(travelEpisode.getHistoricalData().get((int) Math.floor(0.98*travelEpisode.getHistoricalData().size())));
+//			
+////			System.out.println("Mean travel " + fromStopId + "-" + toStopId + ":[" + travelEpisode.getLB() + " ," + travelEpisode.getUB() + "] from size: " + ((int) Math.floor(0.98*travelEpisode.historical_durations.size()))+"/"+travelEpisode.historical_durations.size());
+//		}		
 	}
 	
 	public static void parseTrip(String tripFileName, String calendarFileName, String calendarDateFileName,
